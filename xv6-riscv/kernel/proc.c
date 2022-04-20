@@ -125,6 +125,7 @@ found:
   p->state = USED;
   p->mean_ticks = 0;
   p->last_ticks = 0;
+  p->start_cpu_burst = 0;
 
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
@@ -498,29 +499,25 @@ sjf(void){
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  int start_cpu_brust;
-  int end_cpu_brust;
-
-  // printf(INT_MAX ,"%d\n");
   struct proc *min_proc = proc;
   // min_proc = proc;          
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
-    int min = INT_MAX;
+    int min = -1;
     for(p = proc; p < &proc[NPROC]; p++) { 
       acquire(&p->lock);
       if(pause_time != 0){  
-        // if(min_proc->pid != 1 && min_proc->pid != 2){
+         if(min_proc->pid != 1 && min_proc->pid != 2){
           if(ticks >= pause_time){
             pause_time = 0;
           }else{
            release(&p->lock);
            continue;
           }
-        // }
+         }
       }
-      else if(p->mean_ticks < min){
+      else if(min == -1 || p->mean_ticks < min){
               min = p->mean_ticks;
               min_proc = p;
           }
@@ -530,11 +527,10 @@ sjf(void){
         if(min_proc->state == RUNNABLE) {
           min_proc->state = RUNNING;
           c->proc = min_proc;
-          start_cpu_brust = ticks;
+          min_proc->start_cpu_burst = ticks;
           swtch(&c->context, &p->context);
-          end_cpu_brust = ticks;
-          min_proc->last_ticks = end_cpu_brust-start_cpu_brust;
-          min_proc->mean_ticks = ((10*rate)* min_proc->mean_ticks + min_proc->last_ticks*(rate))/10;          
+          // end_cpu_brust = ticks;
+            
           // Process is done running for now.
           // It should have changed its p->state before coming back.
           c->proc = 0;
@@ -568,6 +564,8 @@ sched(void)
 
   intena = mycpu()->intena;
   swtch(&p->context, &mycpu()->context);
+  p->last_ticks = ticks - p->start_cpu_burst;
+  p->mean_ticks = ((10*rate)* p->mean_ticks + p->last_ticks*(rate))/10;
   mycpu()->intena = intena;
 }
 

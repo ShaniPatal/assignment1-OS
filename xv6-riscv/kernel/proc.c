@@ -501,7 +501,6 @@ sjf(void){
   struct cpu *c = mycpu();
   c->proc = 0;
   
-  // min_proc = proc;          
   for(;;){
     struct proc *min_proc;
     // Avoid deadlock by ensuring that devices can interrupt.
@@ -531,15 +530,11 @@ sjf(void){
           min_proc->state = RUNNING;
           c->proc = min_proc;
           min_proc->start_cpu_burst = ticks;
-          printf("%d\n", ticks);
           swtch(&c->context, &min_proc->context);
-          printf("%d\n", ticks);
           min_proc->last_ticks = ticks - min_proc->start_cpu_burst;
           min_proc->mean_ticks = ((10*rate)* min_proc->mean_ticks + min_proc->last_ticks*(rate)) / 10;
           
           // printf("%d\n", min_proc->start_cpu_burst);
-           
-
           // printf("%d\n", min_proc->last_ticks);
 
           c->proc = 0;

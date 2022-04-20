@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "defs.h"
 #include "limits.h"
+#include <inttypes.h>
 
 struct cpu cpus[NCPU];
 
@@ -499,16 +500,16 @@ sjf(void){
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
-  struct proc *min_proc = proc;
+  
   // min_proc = proc;          
   for(;;){
+    struct proc *min_proc;
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
     int min = -1;
     for(p = proc; p < &proc[NPROC]; p++) { 
       acquire(&p->lock);
-      if(pause_time != 0){  
-         if(min_proc->pid != 1 && min_proc->pid != 2){
+         if(p->pid != 1 && p->pid != 2 && pause_time != 0){
           if(ticks >= pause_time){
             pause_time = 0;
           }else{
@@ -516,28 +517,39 @@ sjf(void){
            continue;
           }
          }
-      }
       else if(min == -1 || p->mean_ticks < min){
               min = p->mean_ticks;
               min_proc = p;
           }
         release(&p->lock);
     }
+    if(min == -1){
+      continue;
+    }
       acquire(&min_proc->lock);
         if(min_proc->state == RUNNABLE) {
           min_proc->state = RUNNING;
           c->proc = min_proc;
           min_proc->start_cpu_burst = ticks;
-          swtch(&c->context, &p->context);
-          // end_cpu_brust = ticks;
-            
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
+          printf("%d\n", ticks);
+          swtch(&c->context, &min_proc->context);
+          printf("%d\n", ticks);
+          min_proc->last_ticks = ticks - min_proc->start_cpu_burst;
+          min_proc->mean_ticks = ((10*rate)* min_proc->mean_ticks + min_proc->last_ticks*(rate)) / 10;
+          
+          // printf("%d\n", min_proc->start_cpu_burst);
+           
+
+          // printf("%d\n", min_proc->last_ticks);
+
           c->proc = 0;
         }
         release(&min_proc->lock);
+
       }
   }
+  
+
 
 
 // Switch to scheduler.  Must hold only p->lock
@@ -564,10 +576,10 @@ sched(void)
 
   intena = mycpu()->intena;
   swtch(&p->context, &mycpu()->context);
-  p->last_ticks = ticks - p->start_cpu_burst;
-  p->mean_ticks = ((10*rate)* p->mean_ticks + p->last_ticks*(rate))/10;
   mycpu()->intena = intena;
 }
+
+
 
 // Give up the CPU for one scheduling round.
 void

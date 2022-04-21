@@ -115,3 +115,8 @@ pause_system:
  li a7, SYS_pause_system
  ecall
  ret
+.global print_stats
+print_stats:
+ li a7, SYS_print_stats
+ ecall
+ ret

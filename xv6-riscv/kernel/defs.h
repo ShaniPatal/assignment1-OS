@@ -106,6 +106,7 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             kill_system(void);
 int             pause_system(int seconds);
+void            print_stats(void);
 void            round_robin(void)  __attribute__((noreturn));
 void            sjf(void) __attribute__((noreturn));
 void            fcfs(void) __attribute__((noreturn));

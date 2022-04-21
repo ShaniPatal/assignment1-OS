@@ -731,7 +731,7 @@ wakeup(void *chan)
         p->state = RUNNABLE;
         p->last_runnable_time = ticks;
         // p->start_cpu_burst = ticks;
-        p->sleeping_time += ticks - start_sleeping;
+        p->sleeping_time += ticks - p->start_sleeping;
       }
       release(&p->lock);
     }

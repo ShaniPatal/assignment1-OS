@@ -43,7 +43,7 @@ void env_large(){
   28:	00000097          	auipc	ra,0x0
   2c:	2f8080e7          	jalr	760(ra) # 320 <wait>
   30:	fea04ae3          	bgtz	a0,24 <env_large+0x24>
-}
+}   
   34:	70e2                	ld	ra,56(sp)
   36:	7442                	ld	s0,48(sp)
   38:	74a2                	ld	s1,40(sp)
@@ -82,9 +82,9 @@ void env_large(){
 //     env(10e1, 10e1, "env_freq");
 // }
 
+
 int
-main(int argc, char *argv[])
-{
+main(int argc, char *argv[]){
   80:	1141                	addi	sp,sp,-16
   82:	e406                	sd	ra,8(sp)
   84:	e022                	sd	s0,0(sp)
@@ -96,6 +96,8 @@ main(int argc, char *argv[])
     print_stats();
   90:	00000097          	auipc	ra,0x0
   94:	338080e7          	jalr	824(ra) # 3c8 <print_stats>
+   
+    
     exit(0);
   98:	4501                	li	a0,0
   9a:	00000097          	auipc	ra,0x0

@@ -410,10 +410,10 @@ void exit(int status)
 
   release(&wait_lock);
   num_processes++;
-  p->running_time += (ticks - p->start_cpu_burst);
-  sleeping_processes_mean = ((sleeping_processes_mean * num_processes) + p->sleeping_time) / (num_processes);
-  running_processes_mean = (((running_processes_mean)*num_processes) + p->running_time) / (num_processes);
-  runnable_processes_mean = ((runnable_processes_mean * num_processes) + p->runnable_time) / (num_processes);
+  p->running_time += ticks - p->start_cpu_burst;
+  sleeping_processes_mean = ((sleeping_processes_mean * (num_processes - 1)) + p->sleeping_time) / (num_processes);
+  running_processes_mean = ((running_processes_mean * (num_processes - 1)) + p->running_time) / (num_processes);
+  runnable_processes_mean = ((runnable_processes_mean * (num_processes - 1)) + p->runnable_time) / (num_processes);
   if (p->pid != 1 && p->pid != 2)
   {
     program_time += p->running_time;
@@ -531,14 +531,9 @@ void round_robin()
         }
         p->state = RUNNING;
         c->proc = p;
-        p->runnable_time += (ticks - p->last_runnable_time);
+        p->runnable_time += ticks - p->last_runnable_time;
         p->start_cpu_burst = ticks;
         swtch(&c->context, &p->context);
-        p->last_ticks = ticks - p->start_cpu_burst;
-        p->running_time = p->running_time + p->last_ticks;
-
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
         c->proc = 0;
       }
       release(&p->lock);
@@ -590,11 +585,9 @@ void sjf(void)
     {
       min_proc->state = RUNNING;
       c->proc = min_proc;
-      min_proc->runnable_time += (ticks - min_proc->last_runnable_time);
+      min_proc->runnable_time += ticks - min_proc->last_runnable_time;
       min_proc->start_cpu_burst = ticks;
       swtch(&c->context, &min_proc->context);
-      min_proc->last_ticks = ticks - min_proc->start_cpu_burst;
-      min_proc->mean_ticks = ((10 * rate) * min_proc->mean_ticks + min_proc->last_ticks * (rate)) / 10;
       c->proc = 0;
     }
     release(&min_proc->lock);
@@ -645,11 +638,9 @@ void fcfs(void)
     {
       min_proc->state = RUNNING;
       c->proc = min_proc;
-      min_proc->runnable_time += (ticks - min_proc->last_runnable_time);
+      min_proc->runnable_time += ticks - min_proc->last_runnable_time;
       min_proc->start_cpu_burst = ticks;
       swtch(&c->context, &min_proc->context);
-      min_proc->last_ticks = ticks - min_proc->start_cpu_burst;
-
       c->proc = 0;
     }
     release(&min_proc->lock);
@@ -689,7 +680,9 @@ void yield(void)
   acquire(&p->lock);
   p->state = RUNNABLE;
   p->last_runnable_time = ticks;
-  p->running_time += ticks - p->start_cpu_burst; // IS IT GOOD WITH RR?
+  p->last_ticks = ticks - p->start_cpu_burst;
+  p->running_time += p->last_ticks;
+  p->mean_ticks = ((10 - rate) * p->mean_ticks + p->last_ticks * (rate)) / 10;
   sched();
   release(&p->lock);
 }
@@ -735,7 +728,9 @@ void sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
   p->start_sleeping = ticks;
-  p->running_time += (ticks - p->start_cpu_burst);
+  p->last_ticks = ticks - p->start_cpu_burst;
+  p->running_time += p->last_ticks;
+  p->mean_ticks = ((10 - rate) * p->mean_ticks + p->last_ticks * (rate)) / 10;
   sched();
 
   // Tidy up.
@@ -761,7 +756,6 @@ void wakeup(void *chan)
       {
         p->state = RUNNABLE;
         p->last_runnable_time = ticks;
-        // p->start_cpu_burst = ticks;
         p->sleeping_time += ticks - p->start_sleeping;
       }
       release(&p->lock);

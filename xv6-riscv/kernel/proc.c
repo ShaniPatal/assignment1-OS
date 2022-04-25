@@ -18,18 +18,16 @@ int nextpid = 1;
 struct spinlock pid_lock;
 
 int pause_time = 0;
-
 int rate = 5;
 uint sleeping_processes_mean = 0;
 uint running_processes_mean = 0;
 uint runnable_processes_mean = 0;
 uint running_time_mean = 0;
 uint start_sleeping = 0;
-
 uint num_processes = 0;
 uint program_time = 0;
 uint cpu_utilization = 0;
-uint start_time = 0;
+uint start_time;
 
 extern void forkret(void);
 static void freeproc(struct proc *p);
@@ -194,6 +192,14 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+
+  p->sleeping_time = 0;
+  p->runnable_time = 0;
+  p->running_time = 0;
+  p->mean_ticks = 0;
+  p->last_runnable_time = 0;
+  p->last_ticks = 0;
+  p->start_cpu_burst = 0;
 }
 
 // Create a user page table for a given process,
@@ -588,8 +594,8 @@ void sjf(void)
       min_proc->runnable_time += ticks - min_proc->last_runnable_time;
       min_proc->start_cpu_burst = ticks;
       swtch(&c->context, &min_proc->context);
-      c->proc = 0;
     }
+    c->proc = 0;
     release(&min_proc->lock);
   }
 }
@@ -641,8 +647,8 @@ void fcfs(void)
       min_proc->runnable_time += ticks - min_proc->last_runnable_time;
       min_proc->start_cpu_burst = ticks;
       swtch(&c->context, &min_proc->context);
-      c->proc = 0;
-    }
+      }
+    c->proc = 0;
     release(&min_proc->lock);
   }
 }
